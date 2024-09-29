@@ -69,14 +69,13 @@ setup_wallet() {
         case $opt in
             "Use existing wallet (Private Key)")
                 show "Using an existing wallet with Private Key..."
-                read -p "Enter your Private Key (base58 format): " private_key
-                KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
+                read -p "Enter your Private Key (base58 format): " private_key_base58
                 
-                # Convert the private key from base58 to a byte array
-                private_key_array=$(solana-keygen recover 'prompt://?key=$private_key' -o "$KEYPAIR_PATH")
-
+                # Decode the private key from base58 and save it to a JSON file
+                echo "$private_key_base58" | solana-keygen recover 'stdin://' -o "$KEYPAIR_DIR/eclipse-wallet.json" --force
+                
                 if [[ $? -ne 0 ]]; then
-                    show "Failed to create a wallet from private key. Exiting."
+                    show "Failed to recover wallet from private key. Exiting."
                     exit 1
                 fi
                 break
@@ -95,11 +94,12 @@ setup_wallet() {
         esac
     done
 
-    solana config set --keypair "$KEYPAIR_PATH"
+    solana config set --keypair "$KEYPAIR_DIR/eclipse-wallet.json"
     show "Wallet setup completed!"
 
-    cp "$KEYPAIR_PATH" "$PWD"
+    cp "$KEYPAIR_DIR/eclipse-wallet.json" "$PWD"
 }
+
 
 
 create_and_install_dependencies() {
