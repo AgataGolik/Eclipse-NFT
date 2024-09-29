@@ -9,6 +9,7 @@ show() {
 }
 
 mkdir -p Eclipse && cd Eclipse
+
 # Function to install Node.js, npm, Rust, and Solana
 install_all() {
     show "Installing Node.js and npm..."
@@ -21,7 +22,6 @@ install_all() {
 
     if ! command -v solana &> /dev/null; then
         show "Solana not found. Installing Solana..."
-        # Install Solana using the official installer
         sh -c "$(curl -sSfL https://release.solana.com/v1.18.18/install)"
     else
         show "Solana is already installed."
@@ -64,26 +64,29 @@ setup_wallet() {
 
     show "Do you want to use an existing wallet or create a new one?"
     PS3="Please enter your choice (1 or 2): "
-    options=("Use existing wallet (Private Key)" "Create new wallet (Seed Phrase)")
+    options=("Use existing wallet" "Create new wallet")
     select opt in "${options[@]}"; do
         case $opt in
-            "Use existing wallet (Private Key)")
-                show "Using an existing wallet with Private Key..."
-                read -p "Enter your Private Key (base58 format): " private_key_base58
-                
-                # Decode the private key from base58 and save it to a JSON file
-                echo "$private_key_base58" | solana-keygen recover 'stdin://' -o "$KEYPAIR_DIR/eclipse-wallet.json" --force
-                
+            "Use existing wallet")
+                show "Recovering from existing wallet..."
+
+                read -p "Enter your Seed Phrase: " seed_phrase
+                read -p "Enter the derivation path (e.g., m/44'/501'/0'/0'): " derivation_path
+
+                KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
+                echo "$seed_phrase" | solana-keygen recover --outfile "$KEYPAIR_PATH" --derivation-path "$derivation_path" --force
                 if [[ $? -ne 0 ]]; then
-                    show "Failed to recover wallet from private key. Exiting."
+                    show "Failed to recover the wallet. Exiting."
                     exit 1
                 fi
                 break
                 ;;
-            "Create new wallet (Seed Phrase)")
-                show "Creating a new wallet using Seed Phrase..."
+            "Create new wallet")
+                show "Creating a new wallet..."
+
+                read -p "Enter the derivation path (e.g., m/44'/501'/0'/0'): " derivation_path
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                solana-keygen new -o "$KEYPAIR_PATH" --force
+                solana-keygen new --outfile "$KEYPAIR_PATH" --derivation-path "$derivation_path" --force
                 if [[ $? -ne 0 ]]; then
                     show "Failed to create a new wallet. Exiting."
                     exit 1
@@ -94,19 +97,15 @@ setup_wallet() {
         esac
     done
 
-    solana config set --keypair "$KEYPAIR_DIR/eclipse-wallet.json"
+    solana config set --keypair "$KEYPAIR_PATH"
     show "Wallet setup completed!"
 
-    cp "$KEYPAIR_DIR/eclipse-wallet.json" "$PWD"
+    cp "$KEYPAIR_PATH" "$PWD"
 }
 
-
-
 create_and_install_dependencies() {
-    # Remove existing package.json if available
     rm -f package.json
 
-    # Create package.json file
     cat <<EOF > package.json
 {
   "name": "eclipse-nft",
@@ -115,10 +114,6 @@ create_and_install_dependencies() {
   "scripts": {
     "test": "echo \\"Error: no test specified\\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@metaplex-foundation/umi": "^0.9.2",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
@@ -139,30 +134,22 @@ EOF
 }
 
 ts_file_Setup() {
-    # Check if index.ts exists and remove it
     if [ -f index.ts ]; then
         rm index.ts
-    else
-        echo "index.ts does not exist. Skipping removal."
     fi
-    
-    # Download the new index.ts file
     wget -O index.ts https://raw.githubusercontent.com/zunxbt/Eclipse-NFT/main/index.ts
 
-    # Ask the user for the required information
     read -p "Enter NFT Name: " nft_name
     read -p "Enter NFT Symbol: " nft_symbol
     read -p "Enter NFT Description (INFO): " nft_info
     read -p "Enter Pinata API Key: " pinata_api_key
     read -p "Enter Pinata Secret Key: " pinata_secret_key
 
-    # Ask user for the network type
     echo "Select the network to create the NFT:"
     echo "1) Mainnet"
     echo "2) Testnet"
     read -p "Enter your choice (1 for Mainnet, 2 for Testnet): " network_choice
 
-    # Set the network based on user choice
     if [ "$network_choice" == "1" ]; then
         network="mainnet"
     elif [ "$network_choice" == "2" ]; then
@@ -172,10 +159,8 @@ ts_file_Setup() {
         exit 1
     fi
 
-    # Define the file to modify (replace this with the actual file path)
     file_path="./index.ts"
 
-    # Use sed to replace the placeholders with user input
     sed -i "s/NAME/$nft_name/" "$file_path"
     sed -i "s/SYMBOL/$nft_symbol/" "$file_path"
     sed -i "s/INFO/$nft_info/" "$file_path"
@@ -184,14 +169,10 @@ ts_file_Setup() {
     sed -i "s/ZUNXBT3/$network/" "$file_path"
 
     echo "NFT details and network have been updated in $file_path"
-
+   
     if [ -f upload.ts ]; then
         rm upload.ts
-    else
-        echo "upload.ts does not exist. Skipping removal."
     fi
-    
-    # Download the new upload.ts file
     wget -O upload.ts https://raw.githubusercontent.com/zunxbt/Eclipse-NFT/main/upload.ts
     rm -f tsconfig.json
     npx tsc --init
@@ -203,7 +184,6 @@ mint() {
     npx ts-node index.ts
 }
 
-# Function to display the menu
 show_menu() {
     echo -e "\n\e[34m===== Eclipse NFT Setup Menu =====\e[0m"
     echo "1) Install Node.js, Rust, and Solana"
@@ -215,7 +195,6 @@ show_menu() {
     echo -e "===================================\n"
 }
 
-# Main loop
 while true; do
     show_menu
     read -p "Choose an option [1-6]: " choice
