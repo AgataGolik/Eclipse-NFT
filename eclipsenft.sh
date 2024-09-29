@@ -69,39 +69,44 @@ setup_wallet() {
         case $opt in
             "Use existing wallet")
                 show "Recovering from existing wallet..."
-
+                
+                # Wprowadzenie seed phrase
                 read -p "Enter your Seed Phrase: " seed_phrase
-                read -p "Enter the derivation path (e.g., m/44'/501'/0'/0'): " derivation_path
-
+                # Wprowadzenie derivation path
+                read -p "Enter the derivation path (e.g., m/44'/501'/0'/0): " derivation_path
+                
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                echo "$seed_phrase" | solana-keygen recover --outfile "$KEYPAIR_PATH" --derivation-path "$derivation_path" --force
+                
+                # Użycie zmiennej do odzyskiwania portfela
+                solana-keygen recover --outfile "$KEYPAIR_PATH" --force <<< "$seed_phrase"
+
                 if [[ $? -ne 0 ]]; then
-                    show "Failed to recover the wallet. Exiting."
+                    show "Failed to recover the existing wallet. Exiting."
                     exit 1
                 fi
                 break
                 ;;
+
             "Create new wallet")
                 show "Creating a new wallet..."
-
-                read -p "Enter the derivation path (e.g., m/44'/501'/0'/0'): " derivation_path
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                solana-keygen new --outfile "$KEYPAIR_PATH" --derivation-path "$derivation_path" --force
+                solana-keygen new --outfile "$KEYPAIR_PATH" --force
                 if [[ $? -ne 0 ]]; then
                     show "Failed to create a new wallet. Exiting."
                     exit 1
                 fi
                 break
                 ;;
+
             *) show "Invalid option. Please try again." ;;
         esac
     done
 
     solana config set --keypair "$KEYPAIR_PATH"
     show "Wallet setup completed!"
-
     cp "$KEYPAIR_PATH" "$PWD"
 }
+
 
 create_and_install_dependencies() {
     rm -f package.json
