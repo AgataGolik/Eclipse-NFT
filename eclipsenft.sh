@@ -9,7 +9,6 @@ show() {
 }
 
 mkdir -p Eclipse && cd Eclipse
-
 # Function to install Node.js, npm, Rust, and Solana
 install_all() {
     show "Installing Node.js and npm..."
@@ -22,12 +21,13 @@ install_all() {
 
     if ! command -v solana &> /dev/null; then
         show "Solana not found. Installing Solana..."
+        # Install Solana using the official installer
         sh -c "$(curl -sSfL https://release.solana.com/v1.18.18/install)"
     else
         show "Solana is already installed."
     fi
 
-    # Add Solana to PATH
+    # Add Solana to PATH if not already added
     if ! grep -q "$HOME/.local/share/solana/install/active_release/bin" ~/.bashrc; then
         echo 'export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"' >> ~/.bashrc
         show "Added Solana to PATH in .bashrc."
@@ -40,6 +40,7 @@ install_all() {
         fi
     fi
 
+    # Source the appropriate config file
     if [ -n "$BASH_VERSION" ]; then
         source ~/.bashrc
     elif [ -n "$ZSH_VERSION" ]; then
@@ -105,8 +106,10 @@ setup_wallet() {
 
 
 create_and_install_dependencies() {
+    # Remove existing package.json if available
     rm -f package.json
 
+    # Create package.json file
     cat <<EOF > package.json
 {
   "name": "eclipse-nft",
@@ -134,41 +137,66 @@ EOF
     show "package.json file created."
 
     show "Installing npm dependencies..."
-    npm install
+    npm install --only=development
     show "Npm dependencies installation completed."
 }
 
 ts_file_Setup() {
-    rm -f index.ts
+    # Check if index.ts exists and remove it
+    if [ -f index.ts ]; then
+        rm index.ts
+    else
+        echo "index.ts does not exist. Skipping removal."
+    fi
+    
+    # Download the new index.ts file
     wget -O index.ts https://raw.githubusercontent.com/zunxbt/Eclipse-NFT/main/index.ts
 
-    read -p "Enter NFT Name: " nft_name
-    read -p "Enter NFT Symbol: " nft_symbol
-    read -p "Enter NFT Description (INFO): " nft_info
-    read -p "Enter Pinata API Key: " pinata_api_key
-    read -p "Enter Pinata Secret Key: " pinata_secret_key
+# Ask the user for the required information
+read -p "Enter NFT Name: " nft_name
+read -p "Enter NFT Symbol: " nft_symbol
+read -p "Enter NFT Description (INFO): " nft_info
+read -p "Enter Pinata API Key: " pinata_api_key
+read -p "Enter Pinata Secret Key: " pinata_secret_key
 
-    echo "Select the network to create the NFT:"
-    echo "1) Mainnet"
-    echo "2) Testnet"
-    read -p "Enter your choice (1 for Mainnet, 2 for Testnet): " network_choice
+# Ask user for the network type
+echo "Select the network to create the NFT:"
+echo "1) Mainnet"
+echo "2) Testnet"
+read -p "Enter your choice (1 for Mainnet, 2 for Testnet): " network_choice
 
-    if [ "$network_choice" == "1" ]; then
-        network="mainnet"
-    elif [ "$network_choice" == "2" ]; then
-        network="testnet"
+# Set the network based on user choice
+if [ "$network_choice" == "1" ]; then
+    network="mainnet"
+elif [ "$network_choice" == "2" ]; then
+    network="testnet"
+else
+    echo "Invalid choice. Exiting."
+    exit 1
+fi
+
+# Define the file to modify (replace this with the actual file path)
+file_path="./index.ts"
+
+# Use sed to replace the placeholders with user input
+sed -i "s/NAME/$nft_name/" "$file_path"
+sed -i "s/SYMBOL/$nft_symbol/" "$file_path"
+sed -i "s/INFO/$nft_info/" "$file_path"
+sed -i "s/ZUNXBT1/$pinata_api_key/" "$file_path"
+sed -i "s/ZUNXBT2/$pinata_secret_key/" "$file_path"
+sed -i "s/ZUNXBT3/$network/" "$file_path"
+
+echo "NFT details and network have been updated in $file_path"
+   
+
+if [ -f upload.ts ]; then
+        rm upload.ts
     else
-        echo "Invalid choice. Exiting."
-        exit 1
+        echo "upload.ts does not exist. Skipping removal."
     fi
-
-    sed -i "s/NAME/$nft_name/" "index.ts"
-    sed -i "s/SYMBOL/$nft_symbol/" "index.ts"
-    sed -i "s/INFO/$nft_info/" "index.ts"
-    sed -i "s/ZUNXBT1/$pinata_api_key/" "index.ts"
-    sed -i "s/ZUNXBT2/$pinata_secret_key/" "index.ts"
-    sed -i "s/ZUNXBT3/$network/" "index.ts"
-
+    
+    # Download the new index.ts file
+    wget -O upload.ts https://raw.githubusercontent.com/zunxbt/Eclipse-NFT/main/upload.ts
     rm -f tsconfig.json
     npx tsc --init
 }
