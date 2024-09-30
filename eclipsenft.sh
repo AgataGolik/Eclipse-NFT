@@ -76,9 +76,14 @@ setup_wallet() {
                     echo "$PRIVATE_KEY" > "$KEYPAIR_PATH"
                 else
                     # Base58 format
-                    # Convert base58 to byte array
-                    BYTE_ARRAY=$(echo -n "$PRIVATE_KEY" | xxd -p -u | sed 's/.\{2\}/0x&, /g' | sed 's/, $//')
-                    echo "[$BYTE_ARRAY]" > "$KEYPAIR_PATH"
+                    # Use solana-keygen to convert base58 to JSON format
+                    echo "$PRIVATE_KEY" | solana-keygen pubkey ASK - > /dev/null 2>&1
+                    if [ $? -eq 0 ]; then
+                        solana-keygen pubkey ASK - > "$KEYPAIR_PATH" 2>/dev/null <<< "$PRIVATE_KEY"
+                    else
+                        show "Invalid private key format. Exiting."
+                        exit 1
+                    fi
                 fi
                 break
                 ;;
@@ -100,6 +105,10 @@ setup_wallet() {
     show "Wallet setup completed!"
 
     cp "$KEYPAIR_PATH" "$PWD"
+
+    # Verify the content of the wallet file
+    show "Verifying wallet file content:"
+    cat "$KEYPAIR_PATH"
 }
 
 create_and_install_dependencies() {
