@@ -160,7 +160,7 @@ ts_file_Setup() {
     fi
     
     # Download the new index.ts file
-    wget -O index.ts https://raw.githubusercontent.com/zunxbt/Eclipse-NFT/main/index.ts
+    wget -O index.ts https://raw.githubusercontent.com/AgataGolik/Eclipse-NFT/main/index.ts
 
 # Ask the user for the required information
 read -p "Enter NFT Name: " nft_name
