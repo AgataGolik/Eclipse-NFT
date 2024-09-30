@@ -68,14 +68,16 @@ setup_wallet() {
     select opt in "${options[@]}"; do
         case $opt in
             "Use existing private key")
-                show "Enter the path to your existing private key file:"
-                read -p "> " PRIVATE_KEY_PATH
-                if [ ! -f "$PRIVATE_KEY_PATH" ]; then
-                    show "File not found. Exiting."
-                    exit 1
-                fi
+                show "Enter your private key:"
+                read -p "> " PRIVATE_KEY
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                cp "$PRIVATE_KEY_PATH" "$KEYPAIR_PATH"
+                if [[ $PRIVATE_KEY == \[* ]]; then
+                    # Array format
+                    echo "[${PRIVATE_KEY:1:-1}]" > "$KEYPAIR_PATH"
+                else
+                    # Base58 format
+                    echo "[$PRIVATE_KEY]" > "$KEYPAIR_PATH"
+                fi
                 break
                 ;;
             "Enter new private key")
