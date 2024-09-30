@@ -67,29 +67,18 @@ setup_wallet() {
     options=("Use existing private key" "Enter new private key" "Create new wallet")
     select opt in "${options[@]}"; do
         case $opt in
-            "Use existing private key")
-                show "Enter your private key:"
-                read -p "> " PRIVATE_KEY
-                KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                if [[ $PRIVATE_KEY == \[* ]]; then
-                    # Array format
-                    echo "[${PRIVATE_KEY:1:-1}]" > "$KEYPAIR_PATH"
-                else
-                    # Base58 format
-                    echo "[$PRIVATE_KEY]" > "$KEYPAIR_PATH"
-                fi
-                break
-                ;;
-            "Enter new private key")
+            "Use existing private key"|"Enter new private key")
                 show "Enter your private key (base58 or array format):"
                 read -p "> " PRIVATE_KEY
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
                 if [[ $PRIVATE_KEY == \[* ]]; then
                     # Array format
-                    echo "[${PRIVATE_KEY:1:-1}]" > "$KEYPAIR_PATH"
+                    echo "$PRIVATE_KEY" > "$KEYPAIR_PATH"
                 else
                     # Base58 format
-                    echo "[$PRIVATE_KEY]" > "$KEYPAIR_PATH"
+                    # Convert base58 to byte array
+                    BYTE_ARRAY=$(echo -n "$PRIVATE_KEY" | xxd -p -u | sed 's/.\{2\}/0x&, /g' | sed 's/, $//')
+                    echo "[$BYTE_ARRAY]" > "$KEYPAIR_PATH"
                 fi
                 break
                 ;;
