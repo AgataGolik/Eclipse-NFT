@@ -72,41 +72,48 @@ setup_wallet() {
     KEYPAIR_DIR="$HOME/solana_keypairs"
     mkdir -p "$KEYPAIR_DIR"
 
-    show "Do you want to use an existing private key, enter a new one, or create a new wallet?"
-    PS3="Please enter your choice (1, 2 or 3): "
-    options=("Use existing private key" "Enter new private key" "Create new wallet")
+    show "Czy chcesz użyć istniejącego klucza prywatnego, wprowadzić nowy, czy stworzyć nowy portfel?"
+    PS3="Wybierz opcję (1, 2 lub 3): "
+    options=("Użyj istniejącego klucza prywatnego" "Wprowadź nowy klucz prywatny" "Stwórz nowy portfel")
     select opt in "${options[@]}"; do
         case $opt in
-            "Use existing private key"|"Enter new private key")
-                show "Enter your private key in base58 format:"
+            "Użyj istniejącego klucza prywatnego"|"Wprowadź nowy klucz prywatny")
+                show "Wprowadź klucz prywatny (Base58 lub tablica liczb):"
                 read -p "> " PRIVATE_KEY
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
-                echo "{\"privateKey\":\"$PRIVATE_KEY\"}" > "$KEYPAIR_PATH"
+                if [[ $PRIVATE_KEY == \[* ]]; then
+                    # Jeśli wprowadzono tablicę liczb
+                    echo "$PRIVATE_KEY" > "$KEYPAIR_PATH"
+                else
+                    # Jeśli wprowadzono Base58
+                    npm install bs58  # Instalacja bs58 (jeśli nie jest zainstalowane)
+                    byte_array=$(node -e "console.log(JSON.stringify(require('bs58').decode('$PRIVATE_KEY')))")
+                    echo "$byte_array" > "$KEYPAIR_PATH"
+                fi
                 break
                 ;;
-            "Create new wallet")
-                show "Creating a new wallet..."
+            "Stwórz nowy portfel")
+                show "Tworzę nowy portfel..."
                 KEYPAIR_PATH="$KEYPAIR_DIR/eclipse-wallet.json"
                 solana-keygen new -o "$KEYPAIR_PATH" --force
                 if [[ $? -ne 0 ]]; then
-                    show "Failed to create a new wallet. Exiting."
+                    show "Nie udało się stworzyć nowego portfela. Zakończono."
                     exit 1
                 fi
                 break
                 ;;
-            *) show "Invalid option. Please try again." ;;
+            *) show "Błędna opcja. Spróbuj ponownie." ;;
         esac
     done
 
     solana config set --keypair "$KEYPAIR_PATH"
-    show "Wallet setup completed!"
+    show "Konfiguracja portfela zakończona!"
 
-    cp "$KEYPAIR_PATH" "$PWD"
-
-    # Verify the content of the wallet file
-    show "Verifying wallet file content:"
+    # Wyświetlenie zawartości pliku portfela
+    show "Zawartość pliku portfela:"
     cat "$KEYPAIR_PATH"
 }
+
 
 create_and_install_dependencies() {
     # Remove existing package.json if available
