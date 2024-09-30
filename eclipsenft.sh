@@ -57,7 +57,17 @@ install_all() {
     fi
 }
 
-# Function to set up wallet
+base58_to_hex() {
+    local base58="$1"
+    local alphabet="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    local decimal=0
+    for (( i=0; i<${#base58}; i++ )); do
+        decimal=$(( decimal * 58 + $(expr index "$alphabet" "${base58:$i:1}") - 1 ))
+    done
+    printf "%x" $decimal
+}
+
+# Updated setup_wallet function
 setup_wallet() {
     KEYPAIR_DIR="$HOME/solana_keypairs"
     mkdir -p "$KEYPAIR_DIR"
@@ -76,14 +86,9 @@ setup_wallet() {
                     echo "$PRIVATE_KEY" > "$KEYPAIR_PATH"
                 else
                     # Base58 format
-                    # Use solana-keygen to convert base58 to JSON format
-                    echo "$PRIVATE_KEY" | solana-keygen pubkey ASK - > /dev/null 2>&1
-                    if [ $? -eq 0 ]; then
-                        solana-keygen pubkey ASK - > "$KEYPAIR_PATH" 2>/dev/null <<< "$PRIVATE_KEY"
-                    else
-                        show "Invalid private key format. Exiting."
-                        exit 1
-                    fi
+                    hex_key=$(base58_to_hex "$PRIVATE_KEY")
+                    byte_array=$(echo $hex_key | sed 's/.\{2\}/0x&, /g' | sed 's/, $//')
+                    echo "[$byte_array]" > "$KEYPAIR_PATH"
                 fi
                 break
                 ;;
